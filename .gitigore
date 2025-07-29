@@ -9,6 +9,9 @@ build/
 *.o
 *.S
 
+# === IDF Component Manager 디렉토리 ===
+managed_components/
+
 # === SDK Configuration Files ===
 sdkconfig.old
 project_description.json
