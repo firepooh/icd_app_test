@@ -1,5 +1,5 @@
-# .github/workflows/esp-matter-ci.yml
-name: Build esp-matter icd_app
+# .github/workflows/ci.yml
+name: Build ICD_APP (esp-matter via idf-component-manager)
 
 on:
   push:
@@ -12,10 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -29,21 +27,20 @@ jobs:
         ./install.sh
       shell: bash
 
-    - name: Set up build environment
+    - name: Set IDF_PATH env
       run: |
-        export IDF_PATH=$GITHUB_WORKSPACE/esp-idf
-        . $IDF_PATH/export.sh
+        echo "IDF_PATH=$GITHUB_WORKSPACE/esp-idf" >> $GITHUB_ENV
       shell: bash
 
-    - name: Build icd_app project
+    - name: Build project with idf-component-manager
       run: |
-        export IDF_PATH=$GITHUB_WORKSPACE/esp-idf
         . $IDF_PATH/export.sh
         idf.py set-target esp32c6
+        idf.py reconfigure    # dependencies download
         idf.py build
       shell: bash
 
-    - name: Upload build output
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: icd_app_build
