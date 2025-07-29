@@ -1,5 +1,5 @@
-# File: .github/workflows/icd-app-ci.yml
-name: ESP‑Matter ICD App CI
+# .github/workflows/esp-matter-ci.yml
+name: Build esp-matter icd_app
 
 on:
   push:
@@ -8,58 +8,43 @@ on:
     branches: [ main ]
 
 jobs:
-  build_icd_app:
+  build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        idf_ver: [ v5.4.1 ]
-
     steps:
-    - name: Checkout repo (with submodules)
+    - name: Checkout repository
       uses: actions/checkout@v3
       with:
         submodules: 'recursive'
 
-    - name: Install Python
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
     - name: Clone ESP-IDF
       run: |
-        git clone --depth=1 -b ${{ matrix.idf_ver }} https://github.com/espressif/esp-idf.git
+        git clone --depth=1 -b v5.4.2 https://github.com/espressif/esp-idf.git
         cd esp-idf
         ./install.sh
       shell: bash
 
-    - name: Install ESP‑Matter via submodule or registry
-      run: |
-        cd $GITHUB_WORKSPACE
-        # 예: esp-matter가 서브모듈로 이미 포함되어 있다고 가정
-        cd esp-matter
-        ./install.sh
-      shell: bash
-
-    - name: Setup environment
+    - name: Set up build environment
       run: |
         export IDF_PATH=$GITHUB_WORKSPACE/esp-idf
         . $IDF_PATH/export.sh
-        export CCACHE_ENABLE=1
-        cd $GITHUB_WORKSPACE
       shell: bash
 
-    - name: Build icd_app example
+    - name: Build icd_app project
       run: |
         export IDF_PATH=$GITHUB_WORKSPACE/esp-idf
         . $IDF_PATH/export.sh
-        cd examples/icd_app
         idf.py set-target esp32c6
         idf.py build
       shell: bash
 
-    - name: Upload build artifacts
+    - name: Upload build output
       uses: actions/upload-artifact@v4
       with:
         name: icd_app_build
-        path: examples/icd_app/build/
+        path: build/
