@@ -25,6 +25,9 @@
 #include <app/server/CommissioningWindowManager.h>
 #include <app/server/Server.h>
 
+#include <i2c_bus.h>
+#include <sht3x.h>
+
 static const char *TAG = "app_main";
 
 using namespace esp_matter;
@@ -123,6 +126,59 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
     return err;
 }
 
+#define I2C_MASTER_SCL_IO  GPIO_NUM_3
+#define I2C_MASTER_SDA_IO  GPIO_NUM_4
+#define I2C_MASTER_NUM     I2C_NUM_0
+#define I2C_MASTER_FREQ_HZ 100000
+
+static i2c_bus_handle_t i2c_bus = NULL;
+static sht3x_handle_t sht3x = NULL;
+
+static void sensor_init(void)
+{
+    // Initialize I2C for sensor communication
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_pullup_en = GPIO_PULLUP_DISABLE,
+        .scl_pullup_en = GPIO_PULLUP_DISABLE,
+        .master = {
+            .clk_speed = I2C_MASTER_FREQ_HZ,
+        },
+    };
+
+    i2c_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    if (i2c_bus == NULL) {
+        ESP_LOGE(TAG, "Failed to create I2C bus");
+        return;
+    }
+
+    sht3x = sht3x_create(i2c_bus, SHT3x_ADDR_PIN_SELECT_VSS);
+    if (sht3x == NULL) {
+        ESP_LOGE(TAG, "Failed to create SHT3x sensor handle");
+        return;
+    }
+
+    sht3x_set_measure_mode(sht3x, SHT3x_PER_2_MEDIUM);     /*!< here read data in periodic mode*/
+}
+
+void sensor_get( float *temperature, float *humidity)
+{
+    if (sht3x == NULL) {
+        ESP_LOGE(TAG, "SHT3x sensor handle is NULL");
+        return;
+    }
+
+    esp_err_t err = sht3x_get_humiture(sht3x, temperature, humidity);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get sensor data, err: %d", err);
+        return;
+    }
+
+    ESP_LOGI(TAG, "Temperature: %.2f C, Humidity: %.2f %%", *temperature, *humidity);
+}
+
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
@@ -143,6 +199,9 @@ extern "C" void app_main()
 #ifdef CONFIG_ENABLE_USER_ACTIVE_MODE_TRIGGER_BUTTON
     app_driver_button_init();
 #endif
+
+    sensor_init();
+
     /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
     node::config_t node_config;
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
