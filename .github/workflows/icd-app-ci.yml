@@ -15,14 +15,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # --- 추가된 부분 ---
-    # esp-matter 저장소를 워크스페이스 내 'esp-matter' 폴더로 체크아웃합니다.
-    - name: Checkout esp-matter repository
+    # ------------------- 이 부분이 수정되었습니다 -------------------
+    # 1. esp-matter 리포지토리 자체만 shallow clone으로 빠르게 가져옵니다. (서브모듈은 가져오지 않음)
+    - name: Checkout esp-matter repository (shallow)
       uses: actions/checkout@v4
       with:
         repository: espressif/esp-matter
         path: esp-matter
-        submodules: 'recursive'
+        submodules: false # 서브모듈 자동 클론 비활성화
+        depth: 1         # 가장 최신 커밋만 가져오기
+
+    # 2. esp-matter의 스크립트를 사용해 필요한 서브모듈만 shallow clone으로 가져옵니다.
+    - name: Checkout esp-matter submodules (Optimized)
+      run: |
+        cd esp-matter
+        ./scripts/checkout_submodules.sh --platform esp32 --depth 1
+      shell: bash
+    # ----------------------------------------------------------------
 
     - name: Set up Python
       uses: actions/setup-python@v4
