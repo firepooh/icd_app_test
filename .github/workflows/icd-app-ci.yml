@@ -13,7 +13,15 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+
+    # --- 추가된 부분 ---
+    # esp-matter 저장소를 워크스페이스 내 'esp-matter' 폴더로 체크아웃합니다.
+    - name: Checkout esp-matter repository
+      uses: actions/checkout@v4
+      with:
+        repository: espressif/esp-matter
+        path: esp-matter
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -32,11 +40,15 @@ jobs:
         echo "IDF_PATH=$GITHUB_WORKSPACE/esp-idf" >> $GITHUB_ENV
       shell: bash
 
+    # --- 수정된 부분 ---
+    # 빌드 단계에서 ESP_MATTER_PATH 환경 변수를 설정합니다.
     - name: Build project with idf-component-manager
+      env:
+        ESP_MATTER_PATH: ${{ github.workspace }}/esp-matter
       run: |
         . $IDF_PATH/export.sh
         idf.py set-target esp32c6
-        idf.py reconfigure    # dependencies download
+        idf.py reconfigure      # dependencies download
         idf.py build
       shell: bash
 
